@@ -1,0 +1,201 @@
+import { Search } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Calendar, User, Eye } from "lucide-react"
+
+// Mock search results
+const searchResults = [
+  {
+    id: 1,
+    title: "New Korean Cultural Center Opens in San Francisco",
+    excerpt: "The center will offer language classes, cultural events, and community gatherings.",
+    category: "Community",
+    date: "2023-06-15",
+    author: "Sarah Kim",
+    views: "1.2K",
+    imageUrl: "/placeholder.svg?height=200&width=300",
+  },
+  {
+    id: 2,
+    title: "Annual Korean Food Festival Returns This Summer",
+    excerpt: "The popular event will feature over 30 food vendors and live performances.",
+    category: "Events",
+    date: "2023-06-10",
+    author: "Michael Park",
+    views: "987",
+    imageUrl: "/placeholder.svg?height=200&width=300",
+  },
+  {
+    id: 3,
+    title: "Local Korean Business Owner Receives Entrepreneurship Award",
+    excerpt: "Jane Kim's innovative approach to sustainable fashion has earned recognition.",
+    category: "Business",
+    date: "2023-06-05",
+    author: "David Lee",
+    views: "756",
+    imageUrl: "/placeholder.svg?height=200&width=300",
+  },
+  {
+    id: 4,
+    title: "Korean Language Classes Now Available at Community College",
+    excerpt: "The new program aims to promote cultural exchange and language learning.",
+    category: "Education",
+    date: "2023-06-01",
+    author: "Jennifer Choi",
+    views: "654",
+    imageUrl: "/placeholder.svg?height=200&width=300",
+  },
+  {
+    id: 5,
+    title: "Traditional Korean Music Concert Coming to Davies Symphony Hall",
+    excerpt: "The concert will feature traditional instruments and contemporary compositions.",
+    category: "Arts",
+    date: "2023-05-28",
+    author: "Robert Kim",
+    views: "543",
+    imageUrl: "/placeholder.svg?height=200&width=300",
+  },
+]
+
+export default function SearchPage({
+  searchParams,
+}: {
+  searchParams: { q?: string }
+}) {
+  const query = searchParams.q || ""
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto mb-12">
+          <form action="/search" className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-red-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition-opacity"></div>
+            <div className="relative">
+              <Input
+                name="q"
+                defaultValue={query}
+                className="pl-6 pr-16 py-8 text-lg rounded-2xl border-2 border-amber-200 bg-white/90 backdrop-blur-sm shadow-xl focus:border-amber-400 focus:ring-4 focus:ring-amber-100 transition-all"
+                placeholder="Search Bay Area Korean news, events, and updates..."
+              />
+              <Button
+                type="submit"
+                size="icon"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl h-12 w-12 bg-gradient-to-r from-amber-500 to-red-500 hover:from-amber-600 hover:to-red-600 shadow-lg"
+              >
+                <Search className="h-6 w-6" />
+                <span className="sr-only">Search</span>
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {query ? `Search results for "${query}"` : "All Articles"}
+              </h1>
+              <p className="text-gray-600 mt-2">{searchResults.length} results found</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                Latest
+              </Button>
+              <Button variant="outline" size="sm">
+                Most Popular
+              </Button>
+              <Button variant="outline" size="sm">
+                Trending
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+              {searchResults.map((article) => (
+                <Link key={article.id} href={`/article/${article.id}`}>
+                  <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-white">
+                    <CardContent className="p-0">
+                      <div className="flex flex-col sm:flex-row">
+                        <div className="relative h-48 sm:h-32 sm:w-48 flex-shrink-0">
+                          <Image
+                            src={article.imageUrl || "/placeholder.svg"}
+                            alt={article.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="p-6 flex-1">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Badge variant="outline" className="border-amber-200 text-amber-700">
+                              {article.category}
+                            </Badge>
+                          </div>
+                          <h2 className="text-xl font-bold text-gray-900 group-hover:text-red-700 transition-colors mb-3">
+                            {article.title}
+                          </h2>
+                          <p className="text-gray-600 line-clamp-2 mb-4">{article.excerpt}</p>
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <User className="h-4 w-4" />
+                              {article.author}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {new Date(article.date).toLocaleDateString()}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-4 w-4" />
+                              {article.views}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-8">
+              <Card className="p-6 bg-gradient-to-br from-amber-50 to-red-50 border-0">
+                <h3 className="font-bold text-gray-900 mb-4">Popular Categories</h3>
+                <div className="space-y-2">
+                  {["Community", "Events", "Business", "Food", "Arts", "Education"].map((category) => (
+                    <Link
+                      key={category}
+                      href={`/category/${category.toLowerCase()}`}
+                      className="block px-3 py-2 rounded-lg hover:bg-white/50 transition-colors text-gray-700 hover:text-red-700"
+                    >
+                      {category}
+                    </Link>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="p-6 bg-white border-0 shadow-lg">
+                <h3 className="font-bold text-gray-900 mb-4">Newsletter</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Get the latest Korean community news delivered to your inbox.
+                </p>
+                <form className="space-y-3">
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="border-amber-200 focus:border-amber-400"
+                  />
+                  <Button className="w-full bg-gradient-to-r from-amber-500 to-red-500">Subscribe</Button>
+                </form>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
