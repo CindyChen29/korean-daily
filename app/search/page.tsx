@@ -1,3 +1,5 @@
+"use client"
+
 import { Search } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -6,67 +8,54 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, User, Eye } from "lucide-react"
+import { useEffect, useState } from "react"
+import { supabase, type Article } from "@/lib/supabase"
+import { useSearchParams } from "next/navigation"
 
-// Mock search results
-const searchResults = [
-  {
-    id: 1,
-    title: "New Korean Cultural Center Opens in San Francisco",
-    excerpt: "The center will offer language classes, cultural events, and community gatherings.",
-    category: "Community",
-    date: "2023-06-15",
-    author: "Sarah Kim",
-    views: "1.2K",
-    imageUrl: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: 2,
-    title: "Annual Korean Food Festival Returns This Summer",
-    excerpt: "The popular event will feature over 30 food vendors and live performances.",
-    category: "Events",
-    date: "2023-06-10",
-    author: "Michael Park",
-    views: "987",
-    imageUrl: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: 3,
-    title: "Local Korean Business Owner Receives Entrepreneurship Award",
-    excerpt: "Jane Kim's innovative approach to sustainable fashion has earned recognition.",
-    category: "Business",
-    date: "2023-06-05",
-    author: "David Lee",
-    views: "756",
-    imageUrl: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: 4,
-    title: "Korean Language Classes Now Available at Community College",
-    excerpt: "The new program aims to promote cultural exchange and language learning.",
-    category: "Education",
-    date: "2023-06-01",
-    author: "Jennifer Choi",
-    views: "654",
-    imageUrl: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: 5,
-    title: "Traditional Korean Music Concert Coming to Davies Symphony Hall",
-    excerpt: "The concert will feature traditional instruments and contemporary compositions.",
-    category: "Arts",
-    date: "2023-05-28",
-    author: "Robert Kim",
-    views: "543",
-    imageUrl: "/placeholder.svg?height=200&width=300",
-  },
-]
+export default function SearchPage() {
+  const searchParams = useSearchParams()
+  const query = searchParams.get("q") || ""
+  const [webResults, setWebResults] = useState<any[]>([])
+  const [dbResults, setDbResults] = useState<Article[]>([])
+  const [loadingWeb, setLoadingWeb] = useState(false)
+  const [loadingDb, setLoadingDb] = useState(false)
+  const [errorWeb, setErrorWeb] = useState<string | null>(null)
+  const [errorDb, setErrorDb] = useState<string | null>(null)
 
-export default function SearchPage({
-  searchParams,
-}: {
-  searchParams: { q?: string }
-}) {
-  const query = searchParams.q || ""
+  useEffect(() => {
+    if (!query) return
+    // Web search
+    setLoadingWeb(true)
+    setErrorWeb(null)
+    fetch(`/api/search?q=${encodeURIComponent(query)}`)
+      .then(res => res.json())
+      .then(data => {
+        // Bing API: data.webPages.value is the array of results
+        setWebResults(data.webPages?.value || [])
+        setLoadingWeb(false)
+      })
+      .catch(err => {
+        setErrorWeb("Failed to fetch web search results")
+        setLoadingWeb(false)
+      })
+    // Internal DB search
+    setLoadingDb(true)
+    setErrorDb(null)
+    supabase
+      .from("articles")
+      .select("*")
+      .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+      .order("published_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          setErrorDb("Failed to fetch internal articles")
+          setDbResults([])
+        } else {
+          setDbResults(data || [])
+        }
+        setLoadingDb(false)
+      })
+  }, [query])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white">
@@ -99,7 +88,11 @@ export default function SearchPage({
               <h1 className="text-3xl font-bold text-gray-900">
                 {query ? `Search results for "${query}"` : "All Articles"}
               </h1>
-              <p className="text-gray-600 mt-2">{searchResults.length} results found</p>
+              {(loadingWeb || loadingDb) && <p className="text-gray-600 mt-2">Loading...</p>}
+              {(errorWeb || errorDb) && <p className="text-red-600 mt-2">{errorWeb || errorDb}</p>}
+              {!loadingWeb && !loadingDb && !errorWeb && !errorDb && (
+                <p className="text-gray-600 mt-2">{dbResults.length + webResults.length} results found</p>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm">
@@ -116,49 +109,86 @@ export default function SearchPage({
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-              {searchResults.map((article) => (
-                <Link key={article.id} href={`/article/${article.id}`}>
-                  <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-white">
-                    <CardContent className="p-0">
-                      <div className="flex flex-col sm:flex-row">
-                        <div className="relative h-48 sm:h-32 sm:w-48 flex-shrink-0">
-                          <Image
-                            src={article.imageUrl || "/placeholder.svg"}
-                            alt={article.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                        <div className="p-6 flex-1">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Badge variant="outline" className="border-amber-200 text-amber-700">
-                              {article.category}
-                            </Badge>
+              {/* Internal DB Results */}
+              {dbResults.length > 0 && (
+                <>
+                  <h2 className="text-xl font-bold text-amber-700 mb-2">Articles from Korean Daily SF</h2>
+                  {dbResults.map((article) => (
+                    <Link key={article.id} href={`/article/${article.id}`}>
+                      <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-white">
+                        <CardContent className="p-0">
+                          <div className="flex flex-col sm:flex-row">
+                            <div className="relative h-48 sm:h-32 sm:w-48 flex-shrink-0">
+                              <Image
+                                src={article.image_url || "/placeholder.svg"}
+                                alt={article.title}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                            <div className="p-6 flex-1">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge variant="outline" className="border-amber-200 text-amber-700">
+                                  {article.category}
+                                </Badge>
+                              </div>
+                              <h2 className="text-xl font-bold text-gray-900 group-hover:text-red-700 transition-colors mb-3">
+                                {article.title}
+                              </h2>
+                              <p className="text-gray-600 line-clamp-2 mb-4">{article.excerpt}</p>
+                              <div className="flex items-center gap-4 text-sm text-gray-500">
+                                <div className="flex items-center gap-1">
+                                  <User className="h-4 w-4" />
+                                  {article.author}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {new Date(article.published_at || article.created_at).toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Eye className="h-4 w-4" />
+                                  {article.views}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <h2 className="text-xl font-bold text-gray-900 group-hover:text-red-700 transition-colors mb-3">
-                            {article.title}
-                          </h2>
-                          <p className="text-gray-600 line-clamp-2 mb-4">{article.excerpt}</p>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <User className="h-4 w-4" />
-                              {article.author}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {new Date(article.date).toLocaleDateString()}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Eye className="h-4 w-4" />
-                              {article.views}
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </>
+              )}
+              {/* Web Results */}
+              {webResults.length > 0 && (
+                <>
+                  <h2 className="text-xl font-bold text-blue-700 mb-2">Web Results</h2>
+                  {webResults.map((item) => (
+                    <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer">
+                      <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-white">
+                        <CardContent className="p-0">
+                          <div className="flex flex-col sm:flex-row">
+                            {/* Bing API may not have images, so skip Image for now */}
+                            <div className="p-6 flex-1">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge variant="outline" className="border-amber-200 text-amber-700">
+                                  Web
+                                </Badge>
+                              </div>
+                              <h2 className="text-xl font-bold text-gray-900 group-hover:text-red-700 transition-colors mb-3">
+                                {item.name}
+                              </h2>
+                              <p className="text-gray-600 line-clamp-2 mb-4">{item.snippet}</p>
+                              <div className="flex items-center gap-4 text-sm text-gray-500">
+                                <span>{item.displayUrl}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+                        </CardContent>
+                      </Card>
+                    </a>
+                  ))}
+                </>
+              )}
             </div>
 
             {/* Sidebar */}
